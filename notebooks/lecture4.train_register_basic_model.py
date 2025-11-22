@@ -1,4 +1,11 @@
 # Databricks notebook source
+# MAGIC %pip install /Workspace/Users/aparnaharichandran@gmail.com/marvel-characters/notebooks/marvel_characters-0.1.0-py3-none-any.whl
+
+# COMMAND ----------
+
+dbutils.library.restartPython() 
+
+# COMMAND ----------
 
 import json
 
@@ -16,6 +23,7 @@ def is_databricks():
     return "DATABRICKS_RUNTIME_VERSION" in os.environ
 
 # COMMAND ----------
+
 # If you have DEFAULT profile and are logged in with DEFAULT profile,
 # skip these lines
 
@@ -31,36 +39,51 @@ spark = SparkSession.builder.getOrCreate()
 tags = Tags(**{"git_sha": "abcd12345", "branch": "main"})
 
 # COMMAND ----------
+
 # Initialize model with the config path
 basic_model = BasicModel(config=config,
                          tags=tags,
                          spark=spark)
 
 # COMMAND ----------
+
 basic_model.load_data()
 basic_model.prepare_features()
 
 # COMMAND ----------
+
 basic_model.train()
 
 # COMMAND ----------
+
 basic_model.log_model()
 
 # COMMAND ----------
+
 logged_model = mlflow.get_logged_model(basic_model.model_info.model_id)
 model = mlflow.sklearn.load_model(f"models:/{basic_model.model_info.model_id}")
 
 # COMMAND ----------
+
+model
+
+# COMMAND ----------
+
 logged_model_dict = logged_model.to_dictionary()
 logged_model_dict["metrics"] = [x.__dict__ for x in logged_model_dict["metrics"]]
 with open("../demo_artifacts/logged_model.json", "w") as json_file:
     json.dump(logged_model_dict, json_file, indent=4)
+
 # COMMAND ----------
+
 logged_model.params
+
 # COMMAND ----------
+
 logged_model.metrics
 
 # COMMAND ----------
+
 run_id = mlflow.search_runs(
     experiment_names=["/Shared/marvel-characters-basic"], filter_string="tags.git_sha='abcd12345'"
 ).run_id[0]
@@ -68,28 +91,35 @@ run_id = mlflow.search_runs(
 model = mlflow.sklearn.load_model(f"runs:/{run_id}/lightgbm-pipeline-model")
 
 # COMMAND ----------
+
 run = mlflow.get_run(basic_model.run_id)
 
 # COMMAND ----------
+
 inputs = run.inputs.dataset_inputs
 training_input = next((x for x in inputs if len(x.tags) > 0 and x.tags[0].value == 'training'), None)
 training_source = mlflow.data.get_source(training_input)
 training_source.load()
+
 # COMMAND ----------
+
 testing_input = next((x for x in inputs if len(x.tags) > 0 and x.tags[0].value == 'testing'), None)
 testing_source = mlflow.data.get_source(testing_input)
 testing_source.load()
 
 # COMMAND ----------
+
 basic_model.register_model()
 
 # COMMAND ----------
+
 # only searching by name is supported
 v = mlflow.search_model_versions(
     filter_string=f"name='{basic_model.model_name}'")
 print(v[0].__dict__)
 
 # COMMAND ----------
+
 # not supported
 v = mlflow.search_model_versions(
     filter_string="tags.git_sha='abcd12345'")
