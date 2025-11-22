@@ -1,4 +1,11 @@
 # Databricks notebook source
+# MAGIC %pip install /Workspace/Users/aparnaharichandran@gmail.com/marvel-characters/notebooks/marvel_characters-0.1.0-py3-none-any.whl
+
+# COMMAND ----------
+
+dbutils.library.restartPython()
+
+# COMMAND ----------
 
 import mlflow
 from pyspark.sql import SparkSession
@@ -15,6 +22,7 @@ def is_databricks():
     return "DATABRICKS_RUNTIME_VERSION" in os.environ
 
 # COMMAND ----------
+
 # If you have DEFAULT profile and are logged in with DEFAULT profile,
 # skip these lines
 
@@ -30,9 +38,10 @@ spark = SparkSession.builder.getOrCreate()
 tags = Tags(**{"git_sha": "abcd12345", "branch": "main"})
 marvel_characters_v = version("marvel_characters")
 
-code_paths=[f"../dist/marvel_characters-{marvel_characters_v}-py3-none-any.whl"]
+code_paths=[]
 
 # COMMAND ----------
+
 client = MlflowClient()
 wrapped_model_version = client.get_model_version_by_alias(
     name=f"{config.catalog_name}.{config.schema_name}.marvel_character_model_basic",
@@ -40,10 +49,12 @@ wrapped_model_version = client.get_model_version_by_alias(
 # Initialize model with the config path
 
 # COMMAND ----------
+
 test_set = spark.table(f"{config.catalog_name}.{config.schema_name}.test_set").toPandas()
 X_test = test_set[config.num_features + config.cat_features]
 
 # COMMAND ----------
+
 pyfunc_model_name = f"{config.catalog_name}.{config.schema_name}.marvel_character_model_custom"
 wrapper = MarvelModelWrapper()
 wrapper.log_register_model(wrapped_model_uri=f"models:/{wrapped_model_version.model_id}",
@@ -54,15 +65,18 @@ wrapper.log_register_model(wrapped_model_uri=f"models:/{wrapped_model_version.mo
                            code_paths=code_paths)
 
 # COMMAND ----------
+
 # unwrap and predict
 loaded_pufunc_model = mlflow.pyfunc.load_model(f"models:/{pyfunc_model_name}@latest-model")
 
 unwraped_model = loaded_pufunc_model.unwrap_python_model()
 
 # COMMAND ----------
+
 unwraped_model.predict(context=None, model_input=X_test[0:1])
+
 # COMMAND ----------
+
 # another predict function with uri
 
 loaded_pufunc_model.predict(X_test[0:1])
-# COMMAND ----------
