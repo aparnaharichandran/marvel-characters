@@ -1,5 +1,5 @@
 # Databricks notebook source
-# MAGIC %pip install marvelousmlops-marvel-characters-1.0.1-py3-none-any.whl
+# MAGIC %pip install /Workspace/Users/aparnaharichandran@gmail.com/marvel-characters/notebooks/marvel_characters-0.1.0-py3-none-any.whl
 
 # COMMAND ----------
 
@@ -47,10 +47,12 @@ config = ProjectConfig.from_yaml(config_path="../project_config_marvel.yml", env
 tags = Tags(git_sha="dev", branch="ab-testing")
 
 # COMMAND ----------
+
 catalog_name = config.catalog_name
 schema_name = config.schema_name
 
 # COMMAND ----------
+
 # Train model A
 basic_model_a = BasicModel(config=config, tags=tags, spark=spark)
 basic_model_a.load_data()
@@ -61,6 +63,7 @@ basic_model_a.register_model()
 model_A_uri = f"models:/{basic_model_a.model_name}@latest-model"
 
 # COMMAND ----------
+
 # Train model B (with different hyperparameters or features)
 basic_model_b = BasicModel(config=config, tags=tags, spark=spark)
 basic_model_b.parameters = {"learning_rate": 0.01, "n_estimators": 1000, "max_depth": 6}
@@ -73,6 +76,7 @@ basic_model_b.register_model()
 model_B_uri = f"models:/{basic_model_b.model_name}@latest-model"
 
 # COMMAND ----------
+
 # Define A/B test wrapper
 class MarvelModelWrapper(mlflow.pyfunc.PythonModel):
     def load_context(self, context):
@@ -95,6 +99,7 @@ class MarvelModelWrapper(mlflow.pyfunc.PythonModel):
             return {"Prediction": predictions[0], "model": "Model B"}
 
 # COMMAND ----------
+
 # Prepare data
 train_set_spark = spark.table(f"{catalog_name}.{schema_name}.train_set")
 train_set = train_set_spark.toPandas()
@@ -103,6 +108,7 @@ X_train = train_set[config.num_features + config.cat_features + ["Id"]]
 X_test = test_set[config.num_features + config.cat_features + ["Id"]]
 
 # COMMAND ----------
+
 mlflow.set_experiment(experiment_name="/Shared/marvel-characters-ab-testing")
 model_name = f"{catalog_name}.{schema_name}.marvel_character_model_pyfunc_ab_test"
 wrapped_model = MarvelModelWrapper()
@@ -125,6 +131,7 @@ model_version = mlflow.register_model(
 )
 
 # COMMAND ----------
+
 # Model serving setup
 workspace = WorkspaceClient()
 endpoint_name = "marvel-characters-ab-testing"
@@ -147,6 +154,7 @@ workspace.serving_endpoints.create(
 )
 
 # COMMAND ----------
+
 # Create sample request body
 sampled_records = train_set[config.num_features + config.cat_features + ["Id"]].sample(n=1000, replace=True)
 
@@ -158,6 +166,7 @@ print(train_set.dtypes)
 print(dataframe_records[0])
 
 # COMMAND ----------
+
 # Call the endpoint with one sample record
 def call_endpoint(record):
     """Calls the model serving endpoint with a given input record."""
@@ -175,10 +184,10 @@ print(f"Response Status: {status_code}")
 print(f"Response Text: {response_text}")
 
 # COMMAND ----------
+
 # Load test
 for i in range(len(dataframe_records)):
     status_code, response_text = call_endpoint(dataframe_records[i])
     print(f"Response Status: {status_code}")
     print(f"Response Text: {response_text}")
     time.sleep(0.2)
-# COMMAND ----------
