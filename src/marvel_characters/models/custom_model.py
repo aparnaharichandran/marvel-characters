@@ -48,10 +48,25 @@ class MarvelModelWrapper(mlflow.pyfunc.PythonModel):
         """
         mlflow.set_experiment(experiment_name=experiment_name)
         with mlflow.start_run(run_name=f"wrapper-lightgbm-{datetime.now().strftime('%Y-%m-%d')}", tags=tags.to_dict()):
-            additional_pip_deps = []
+            additional_pip_deps: list[str] = []
+
+            # Add wheel artifact install path and try to include package==version
             for package in code_paths:
                 whl_name = package.split("/")[-1]
                 additional_pip_deps.append(f"code/{whl_name}")
+                try:
+                    parts = whl_name.split("-")
+                    if len(parts) >= 2:
+                        pkg_name = parts[0]
+                        pkg_version = parts[1]
+                        additional_pip_deps.append(f"{pkg_name}=={pkg_version}")
+                except Exception:
+                    # parsing failed — wheel path will still be installed
+                    pass
+
+            # Ensure local source is included so mlflow bundles local module files
+            log_code_paths = ["./marvel_characters"] + list(code_paths)
+
             conda_env = _mlflow_conda_env(additional_pip_deps=additional_pip_deps)
 
             signature = infer_signature(model_input=input_example, model_output={"Survival prediction": ["alive"]})
@@ -60,7 +75,7 @@ class MarvelModelWrapper(mlflow.pyfunc.PythonModel):
                 name="pyfunc-wrapper",
                 artifacts={"lightgbm-pipeline": wrapped_model_uri},
                 signature=signature,
-                code_paths=code_paths,
+                code_paths=log_code_paths,
                 conda_env=conda_env,
             )
         client = MlflowClient()
