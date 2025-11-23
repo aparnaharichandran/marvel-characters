@@ -1,10 +1,12 @@
 # Databricks notebook source
-# MAGIC %pip install marvel_characters-1.0.1-py3-none-any.whl
+# MAGIC %pip install /Workspace/Users/aparnaharichandran@gmail.com/marvel-characters/notebooks/marvel_characters-0.1.0-py3-none-any.whl
 
 # COMMAND ----------
+
 # MAGIC %restart_python
 
 # COMMAND ----------
+
 import time
 import os
 import requests
@@ -20,6 +22,7 @@ from marvel_characters.utils import is_databricks
 
 
 # COMMAND ----------
+
 # spark session
 spark = SparkSession.builder.getOrCreate()
 
@@ -40,17 +43,20 @@ catalog_name = config.catalog_name
 schema_name = config.schema_name
 
 # COMMAND ----------
+
 # Initialize model serving
 model_serving = ModelServing(
     model_name=f"{catalog_name}.{schema_name}.marvel_character_model_custom", endpoint_name="marvel-character-model-serving"
 )
 
 # COMMAND ----------
+
 # Deploy the model serving endpoint
 model_serving.deploy_or_update_serving_endpoint()
 
 
 # COMMAND ----------
+
 # Create a sample request body
 required_columns = [
     "Height",
@@ -77,6 +83,7 @@ sampled_records = sampled_records.replace({np.nan: None}).to_dict(orient="record
 dataframe_records = [[record] for record in sampled_records]
 
 # COMMAND ----------
+
 # Call the endpoint with one sample record
 
 """
@@ -114,10 +121,10 @@ print(f"Response Status: {status_code}")
 print(f"Response Text: {response_text}")
 
 # COMMAND ----------
+
 # Load test
 for i in range(len(dataframe_records)):
     status_code, response_text = call_endpoint(dataframe_records[i])
     print(f"Response Status: {status_code}")
     print(f"Response Text: {response_text}")
     time.sleep(0.2) 
-# COMMAND ----------
